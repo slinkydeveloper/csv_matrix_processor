@@ -3,7 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"github.com/slinkydeveloper/csv_processor/pkg"
+	"github.com/slinkydeveloper/csv_matrix_processor/pkg"
 	"io"
 	"math"
 	"os"
