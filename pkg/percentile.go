@@ -3,14 +3,15 @@ package pkg
 import (
 	"fmt"
 	"github.com/montanaflynn/stats"
+	"runtime"
 	"strconv"
 	"time"
 )
 
 type percentileOperation struct {
-	keyColumn int
-	valueColumn int
-	percentile float64
+	keyColumn    int
+	valueColumn  int
+	percentile   float64
 	outputColumn int
 }
 
@@ -39,20 +40,22 @@ func (p percentileOperation) Run(input [][]float64) [][]float64 {
 		}
 	}
 
-	jobs := make(chan int, 32)
-	rows := make(chan []float64, 32)
+	goroutines := runtime.NumCPU()
 
-	for j := 0; j < 16; j++ {
+	jobs := make(chan int, goroutines*2)
+	rows := make(chan []float64, goroutines*2)
+
+	for j := 0; j < goroutines; j++ {
 		go func() {
 			for i := range jobs {
 				var err error
-				percentile, err := stats.Percentile(values[:i + 1], p.percentile)
+				percentile, err := stats.Percentile(values[:i+1], p.percentile)
 				if err != nil {
 					panic(err)
 				}
 
 				// Create new row for the matrix
-				row := make([]float64, p.outputColumn + 1)
+				row := make([]float64, p.outputColumn+1)
 				row[p.keyColumn] = keys[i]
 				row[p.outputColumn] = percentile
 				rows <- row
@@ -67,7 +70,7 @@ func (p percentileOperation) Run(input [][]float64) [][]float64 {
 	}()
 
 	for i := 1; i < len(keys); i++ {
-		r := <- rows
+		r := <-rows
 		input = append(input, r)
 	}
 
@@ -113,4 +116,3 @@ func NewPercentile(args []string) (Operation, error) {
 
 	return percentileOperation{keyColumn, valueColumn, percentile, outputColumn}, nil
 }
-

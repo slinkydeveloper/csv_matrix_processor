@@ -21,6 +21,8 @@ func main() {
 	filename := os.Args[1]
 	outFilename := os.Args[2]
 
+	runtime.GOMAXPROCS(runtime.NumCPU())
+
 	if !fsExist(filename) {
 		panic(fmt.Sprintf("Cannot find %s", filename))
 	}
