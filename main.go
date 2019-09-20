@@ -13,6 +13,10 @@ import (
 	"time"
 )
 
+const (
+	RUN_COMMAND = "run"
+)
+
 func main() {
 	filename := os.Args[1]
 	outFilename := os.Args[2]
@@ -83,7 +87,11 @@ func readOperations(reader io.Reader) ([]pkg.Operation, error) {
 				return nil, err
 			}
 		}
-		op, err := pkg.Parse(line[:len(line) - 1])
+		line = strings.Trim(line, " ")
+		if line == RUN_COMMAND {
+			return operations, nil
+		}
+		op, err := pkg.Parse(line[:len(line)-1])
 		if err != nil {
 			return nil, err
 		}
@@ -109,7 +117,7 @@ func readCsv(reader io.Reader) ([][]float64, error) {
 			continue
 		}
 
-		unparsedRow := strings.Split(line[:len(line) - 1], ",")
+		unparsedRow := strings.Split(line[:len(line)-1], ",")
 
 		row := make([]float64, len(unparsedRow))
 
