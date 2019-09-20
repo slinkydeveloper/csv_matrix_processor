@@ -1,4 +1,4 @@
-module github.com/slinkydeveloper/csv_processor
+module github.com/slinkydeveloper/csv_matrix_processor
 
 go 1.12
 
