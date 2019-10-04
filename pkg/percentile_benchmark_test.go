@@ -37,6 +37,16 @@ func BenchmarkPercentile(b *testing.B) {
 			max:      1000,
 			elements: 10000,
 		},
+		{
+			min:      0,
+			max:      1,
+			elements: 50000,
+		},
+		{
+			min:      0,
+			max:      1000,
+			elements: 50000,
+		},
 	}
 	for _, test := range tests {
 		b.Run(fmt.Sprintf("%d elements [%v,%v]", test.elements, test.min, test.max), func(b *testing.B) {

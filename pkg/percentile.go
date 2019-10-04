@@ -2,10 +2,10 @@ package pkg
 
 import (
 	"fmt"
-	"github.com/montanaflynn/stats"
+	"github.com/influxdata/tdigest"
 	"runtime"
+	"sort"
 	"strconv"
-	"time"
 )
 
 type percentileOperation struct {
@@ -21,6 +21,8 @@ func (p percentileOperation) String() string {
 
 func (p percentileOperation) Run(input [][]float64) [][]float64 {
 	count := 0
+
+	quantile := p.percentile / 100
 
 	for _, row := range input {
 		if containsColumns(row, []int{p.keyColumn, p.valueColumn}) {
@@ -40,6 +42,13 @@ func (p percentileOperation) Run(input [][]float64) [][]float64 {
 		}
 	}
 
+	// Reorder the values to match the keys order
+	sort.Slice(values, func(i, j int) bool {
+		return keys[i] < keys[j]
+	})
+	// Now reorder the keys
+	sort.Float64s(keys)
+
 	goroutines := runtime.NumCPU()
 
 	jobs := make(chan int, goroutines*2)
@@ -47,12 +56,17 @@ func (p percentileOperation) Run(input [][]float64) [][]float64 {
 
 	for j := 0; j < goroutines; j++ {
 		go func() {
+			td := tdigest.New()
+			td.Add(values[0], 1)
+			lastAddedValue := 0
+
 			for i := range jobs {
-				var err error
-				percentile, err := stats.Percentile(values[:i+1], p.percentile)
-				if err != nil {
-					panic(err)
+				for k := lastAddedValue + 1; k <= i; k++ {
+					td.Add(values[k], 1)
 				}
+				lastAddedValue = i
+
+				percentile := td.Quantile(quantile) * 100
 
 				// Create new row for the matrix
 				row := make([]float64, p.outputColumn+1)
@@ -78,15 +92,6 @@ func (p percentileOperation) Run(input [][]float64) [][]float64 {
 	close(rows)
 
 	return input
-}
-
-func worker(id int, jobs <-chan int, results chan<- int) {
-	for j := range jobs {
-		fmt.Println("worker", id, "started  job", j)
-		time.Sleep(time.Second)
-		fmt.Println("worker", id, "finished job", j)
-		results <- j * 2
-	}
 }
 
 func NewPercentile(args []string) (Operation, error) {
