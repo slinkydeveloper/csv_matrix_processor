@@ -66,7 +66,7 @@ func (p percentileOperation) Run(input [][]float64) [][]float64 {
 				}
 				lastAddedValue = i
 
-				percentile := td.Quantile(quantile) * 100
+				percentile := td.Quantile(quantile)
 
 				// Create new row for the matrix
 				row := make([]float64, p.outputColumn+1)
