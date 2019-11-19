@@ -2,10 +2,9 @@ package pkg
 
 import (
 	"fmt"
-	"github.com/influxdata/tdigest"
-	"runtime"
-	"sort"
 	"strconv"
+
+	"github.com/influxdata/tdigest"
 )
 
 type percentileOperation struct {
@@ -42,54 +41,17 @@ func (p percentileOperation) Run(input [][]float64) [][]float64 {
 		}
 	}
 
-	// Reorder the values to match the keys order
-	sort.Slice(values, func(i, j int) bool {
-		return keys[i] < keys[j]
-	})
-	// Now reorder the keys
-	sort.Float64s(keys)
-
-	goroutines := runtime.NumCPU()
-
-	jobs := make(chan int, goroutines*2)
-	rows := make(chan []float64, goroutines*2)
-
-	for j := 0; j < goroutines; j++ {
-		go func() {
-			td := tdigest.New()
-			td.Add(values[0], 1)
-			lastAddedValue := 0
-
-			for i := range jobs {
-				for k := lastAddedValue + 1; k <= i; k++ {
-					td.Add(values[k], 1)
-				}
-				lastAddedValue = i
-
-				percentile := td.Quantile(quantile)
-
-				// Create new row for the matrix
-				row := make([]float64, p.outputColumn+1)
-				row[p.keyColumn] = keys[i]
-				row[p.outputColumn] = percentile
-				rows <- row
-			}
-		}()
-	}
-
-	go func() {
-		for i := 1; i < len(keys); i++ {
-			jobs <- i
-		}
-	}()
+	td := tdigest.New()
+	td.Add(values[0], 1)
 
 	for i := 1; i < len(keys); i++ {
-		r := <-rows
-		input = append(input, r)
-	}
+		td.Add(values[i], 1)
 
-	close(jobs)
-	close(rows)
+		row := make([]float64, p.outputColumn+1)
+		row[p.keyColumn] = keys[i]
+		row[p.outputColumn] = td.Quantile(quantile)
+		input = append(input, row)
+	}
 
 	return input
 }
