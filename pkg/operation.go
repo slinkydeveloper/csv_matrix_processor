@@ -6,12 +6,12 @@ import (
 )
 
 type Operation interface {
-	Run(input [][]float64)[][]float64
+	Run(input [][]float64) [][]float64
 	fmt.Stringer
 }
 
 type operationParser struct {
-	operationFactories map[string]func([]string)(Operation, error)
+	operationFactories map[string]func([]string) (Operation, error)
 }
 
 var operationParserInstance operationParser
@@ -19,11 +19,12 @@ var operationParserInstance operationParser
 func init() {
 	operationParserInstance = operationParser{
 		operationFactories: map[string]func([]string) (Operation, error){
-			"order":      NewOrder,
-			"scale":      NewScale,
-			"percentile": NewPercentile,
+			"order":             NewOrder,
+			"scale":             NewScale,
+			"percentile":        NewPercentile,
 			"order_and_compact": NewOrderAndCompact,
-			"pick": NewPick,
+			"pick":              NewPick,
+			"skip":              NewSkip,
 		},
 	}
 }
